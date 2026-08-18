@@ -1,4 +1,5 @@
 import swaggerJsdoc from "swagger-jsdoc";
+import path from "path";
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -9,8 +10,12 @@ const options: swaggerJsdoc.Options = {
         bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
       },
     },
-    servers: [{ url: "http://localhost:4000/" }],
+    servers: [{ url: "http://localhost:5000/" }],
   },
-  apis: ["./src/routes/*.ts"],
+  // path.join guarantees absolute resolution relative to this file
+  apis: [
+    path.join(__dirname, "../routes/**/*.ts"),
+    path.join(__dirname, "../routes/**/*.js"),
+  ],
 };
 export const swaggerSpec = swaggerJsdoc(options);
