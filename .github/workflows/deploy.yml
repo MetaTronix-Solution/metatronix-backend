@@ -11,9 +11,11 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      
+        # actions/checkout@v4.1.7 pinned to full commit SHA
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+
       - name: Deploy Via SSH
+        # appleboy/ssh-action@v0.1.6 pinned to full commit SHA
         uses: appleboy/ssh-action@03a60f69747713d33eb43e11400e95b05f6e87f1
         with:
           host: ${{ secrets.SERVER_HOST }}
