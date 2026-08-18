@@ -6,20 +6,21 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Deploy Via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd /home/meta-tronix/metatronix-backend
-            git pull origin main
-            ./deploy.sh
+      - name: Deploy to VPS
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/meta-tronix
+          chmod 600 ~/.ssh/meta-tronix
+
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/meta-tronix "$SERVER_USER@$SERVER_HOST" \
+            "cd /home/meta-tronix/metatronix-backend && git pull origin main && ./deploy.sh"
