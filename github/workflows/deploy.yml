@@ -20,7 +20,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script:
-            cd /path/to/your/project
+            cd /home/meta-tronix/metatronix-backend
             git pull origin main
-            npm install
-            pm2 restart all
+            docker compose up -d --build
+            pm2 restart alldocker image prune -f

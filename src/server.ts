@@ -46,7 +46,7 @@ app.use("/api/v1/blogs", blogRouter);
 app.use("/api/v1/products", productRouter);
 app.use("/api/v1/analytics", analyticRouter);
 
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 5000;
 
 app.use("/health", (req: Request, res: Response) => {
   res.json({

@@ -33,7 +33,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 
 # Application port
-EXPOSE 4000
+EXPOSE 5000
 
 # Start application
 CMD ["node", "dist/server.js"]
