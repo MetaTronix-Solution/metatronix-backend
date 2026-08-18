@@ -52,7 +52,7 @@ app.use("/health", (req: Request, res: Response) => {
   res.json({
     success: true,
     message: "working properly",
-    data: "hello from server to you",
+    data: "hello from server side",
   });
 });
 
