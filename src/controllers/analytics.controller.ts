@@ -2,6 +2,10 @@ import Visit from "../modules/visit.module";
 import asyncHandler from "../util/asyncHandler";
 import AppError from "../util/AppError";
 import { Request, Response } from "express";
+import Blog from "../modules/blog.module";
+import Product from "../modules/product.module";
+import Career from "../modules/careers.module";
+import Team from "../modules/team.module";
 
 type Period = "day" | "week" | "month" | "year";
 
@@ -122,6 +126,34 @@ class AnalyticsController {
       },
     });
   });
+
+  // Aggregate counts across all content types — used for the top-level
+  // dashboard overview cards (total blogs, team members, products, etc.)
+  handleGetOverview = asyncHandler(async (req: Request, res: Response) => {
+  let totalBlogs, totalTeamMembers, totalProducts, totalCareers;
+
+  try {
+    [totalBlogs, totalTeamMembers, totalProducts, totalCareers] =
+      await Promise.all([
+        Blog.countDocuments(),
+        Team.countDocuments(),
+        Product.countDocuments(),
+        Career.countDocuments(),
+      ]);
+  } catch (error) {
+    throw new AppError("Failed to fetch dashboard overview.", 500);
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      totalBlogs,
+      totalTeamMembers,
+      totalProducts,
+      totalCareers,
+    },
+  });
+});
 }
 
 export default new AnalyticsController();
