@@ -134,4 +134,63 @@ router.get(
   AnalyticsController.handleGetSummary,
 );
 
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     Visit:
+ *       ...
+ *     DashboardOverview:
+ *       type: object
+ *       properties:
+ *         totalBlogs:
+ *           type: integer
+ *           example: 24
+ *         totalTeamMembers:
+ *           type: integer
+ *           example: 8
+ *         totalProducts:
+ *           type: integer
+ *           example: 15
+ *         totalCareers:
+ *           type: integer
+ *           example: 6
+ */
+
+// ... existing /admin/visits and /admin/summary blocks stay as-is
+
+/**
+ * @openapi
+ * /api/v1/analytics/admin/overview:
+ *   get:
+ *     summary: Get all-time content counts (admin)
+ *     description: Returns total counts for blogs, team members, products, and careers — used for dashboard overview cards.
+ *     tags: [Analytics - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Content counts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/DashboardOverview'
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized (admin only)
+ */
+router.get(
+  "/admin/overview",
+  protect,
+  authorizeRoles("ADMIN"),
+  AnalyticsController.handleGetOverview,
+);
+
 export default router;
