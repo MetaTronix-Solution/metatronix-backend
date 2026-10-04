@@ -87,22 +87,70 @@ const router = express.Router();
 
 /**
  * @openapi
- * /api/v1/careers:
+ * /api/v1/careers/open:
  *   get:
- *     summary: Get all career postings
+ *     summary: Get all open career postings (public)
+ *     description: Returns only postings with status "open" whose application deadline has not passed. Does not include createdBy.
  *     tags: [Careers]
  *     responses:
  *       200:
- *         description: List of career postings
+ *         description: List of open career postings
  */
-router.get("/", CareersController.handleGetCareers);
+router.get("/open", CareersController.handleGetOpenCareers);
+
+/**
+ * @openapi
+ * /api/v1/careers/open/{id}:
+ *   get:
+ *     summary: Get a single open career posting by ID (public)
+ *     tags: [Careers]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Open career found
+ *       400:
+ *         description: Invalid career ID
+ *       404:
+ *         description: Career not found or not open
+ */
+router.get("/open/:id", CareersController.handleGetOpenCareerById);
+
+/**
+ * @openapi
+ * /api/v1/careers:
+ *   get:
+ *     summary: Get all career postings including drafts and closed (admin only)
+ *     tags: [Careers]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of career postings
+ *       401:
+ *         description: Access token missing/invalid
+ *       403:
+ *         description: Forbidden — admin role required
+ */
+router.get(
+  "/",
+  protect,
+  authorizeRoles("ADMIN"),
+  CareersController.handleGetCareers,
+);
 
 /**
  * @openapi
  * /api/v1/careers/{id}:
  *   get:
- *     summary: Get a career posting by ID
+ *     summary: Get a career posting by ID, any status (admin only)
  *     tags: [Careers]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -114,10 +162,19 @@ router.get("/", CareersController.handleGetCareers);
  *         description: Career found
  *       400:
  *         description: Invalid career ID
+ *       401:
+ *         description: Access token missing/invalid
+ *       403:
+ *         description: Forbidden — admin role required
  *       404:
  *         description: Career not found
  */
-router.get("/:id", CareersController.handleGetCareerById);
+router.get(
+  "/:id",
+  protect,
+  authorizeRoles("ADMIN"),
+  CareersController.handleGetCareerById,
+);
 
 /**
  * @openapi
