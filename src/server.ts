@@ -5,7 +5,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 dotenv.config();
-
+import path from "path";
 import { connectDb } from "./config/connectdb";
 import authRouter from "./routes/auth.routes";
 import careersRouter from "./routes/careers.routes";
@@ -24,6 +24,7 @@ app.use(
   helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
 
@@ -45,6 +46,7 @@ app.use("/api/v1/team", teamRouter);
 app.use("/api/v1/blogs", blogRouter);
 app.use("/api/v1/products", productRouter);
 app.use("/api/v1/analytics", analyticRouter);
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 const port = process.env.PORT || 5000;
 
