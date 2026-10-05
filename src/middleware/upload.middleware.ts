@@ -6,7 +6,6 @@ import { Request } from "express";
 import AppError from "../util/AppError";
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
-
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
 function fileFilter(
@@ -28,21 +27,19 @@ function fileFilter(
 
 export const createUploader = (
   folder: string,
-  maxFileSize = 5 * 1024 * 1024, // 5 MB
+  maxFileSize = 5 * 1024 * 1024, // 5 MB per file
+  maxFiles = 1, // files allowed per request
 ) => {
   const uploadDir = path.join(process.cwd(), "uploads", folder);
 
-  // Create folder if it doesn't exist
   fs.mkdirSync(uploadDir, { recursive: true });
 
   const storage = multer.diskStorage({
     destination: (_req, _file, cb) => {
       cb(null, uploadDir);
     },
-
     filename: (_req, file, cb) => {
       const ext = path.extname(file.originalname).toLowerCase();
-
       cb(null, `${crypto.randomUUID()}${ext}`);
     },
   });
@@ -52,11 +49,15 @@ export const createUploader = (
     fileFilter,
     limits: {
       fileSize: maxFileSize,
-      files: 1,
+      files: maxFiles,
     },
   });
 };
 
 export const uploadBlogImage = createUploader("blogs");
 export const uploadTeamPhoto = createUploader("team");
-export const uploadProductImage = createUploader("product");
+export const uploadProductImage = createUploader(
+  "products",
+  5 * 1024 * 1024,
+  2,
+);

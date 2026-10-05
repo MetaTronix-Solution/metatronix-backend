@@ -7,7 +7,24 @@ import { deleteUpload } from "../util/deleteUpload";
 import mongoose from "mongoose";
 import { IProduct } from "../modules/product.module";
 
+type UploadedFiles = { [field: string]: Express.Multer.File[] } | undefined;
+
 class ProductController {
+  // Public: only active products, featured first
+  handleGetActiveProducts = asyncHandler(
+    async (req: Request, res: Response) => {
+      const products = await Product.find({ status: "active" }).sort({
+        featured: -1,
+        createdAt: -1,
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: products,
+      });
+    },
+  );
+
   handleGetProducts = asyncHandler(async (req: Request, res: Response) => {
     const products = await Product.find().sort({
       createdAt: -1,
@@ -43,7 +60,18 @@ class ProductController {
   });
 
   handleCreateProduct = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.file) {
+    const files = req.files as UploadedFiles;
+    const image = files?.image?.[0];
+    const icon = files?.icon?.[0];
+
+    // removes anything uploaded in this request if we have to bail out
+    const cleanup = async () => {
+      if (image) await deleteUpload(`/uploads/products/${image.filename}`);
+      if (icon) await deleteUpload(`/uploads/products/${icon.filename}`);
+    };
+
+    if (!image) {
+      await cleanup();
       throw new AppError("Product preview image is required.", 400);
     }
 
@@ -68,8 +96,7 @@ class ProductController {
     const exists = await Product.findOne({ slug });
 
     if (exists) {
-      await deleteUpload(`/uploads/products/${req.file.filename}`);
-
+      await cleanup();
       throw new AppError("A product with this name already exists.", 409);
     }
 
@@ -82,7 +109,8 @@ class ProductController {
         problem,
         features,
         technologies,
-        previewUrl: `/uploads/products/${req.file.filename}`,
+        iconUrl: icon ? `/uploads/products/${icon.filename}` : "",
+        previewUrl: `/uploads/products/${image.filename}`,
         productUrl,
         featured,
         status,
@@ -94,7 +122,7 @@ class ProductController {
         data: product,
       });
     } catch (error) {
-      await deleteUpload(`/uploads/products/${req.file.filename}`);
+      await cleanup();
       throw error;
     }
   });
@@ -102,21 +130,24 @@ class ProductController {
   handleUpdateProduct = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      if (req.file) {
-        await deleteUpload(`/uploads/products/${req.file.filename}`);
-      }
+    const files = req.files as UploadedFiles;
+    const image = files?.image?.[0];
+    const icon = files?.icon?.[0];
 
+    const cleanup = async () => {
+      if (image) await deleteUpload(`/uploads/products/${image.filename}`);
+      if (icon) await deleteUpload(`/uploads/products/${icon.filename}`);
+    };
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      await cleanup();
       throw new AppError("Invalid product ID.", 400);
     }
 
     const existingProduct = await Product.findById(id);
 
     if (!existingProduct) {
-      if (req.file) {
-        await deleteUpload(`/uploads/products/${req.file.filename}`);
-      }
-
+      await cleanup();
       throw new AppError("Product not found.", 404);
     }
 
@@ -135,6 +166,7 @@ class ProductController {
     const updateData: Partial<IProduct> & {
       slug?: string;
       previewUrl?: string;
+      iconUrl?: string;
     } = {};
 
     if (name && name !== existingProduct.name) {
@@ -150,10 +182,7 @@ class ProductController {
       });
 
       if (duplicate) {
-        if (req.file) {
-          await deleteUpload(`/uploads/products/${req.file.filename}`);
-        }
-
+        await cleanup();
         throw new AppError(
           "Another product with this name already exists.",
           409,
@@ -196,8 +225,12 @@ class ProductController {
       updateData.status = status;
     }
 
-    if (req.file) {
-      updateData.previewUrl = `/uploads/products/${req.file.filename}`;
+    if (image) {
+      updateData.previewUrl = `/uploads/products/${image.filename}`;
+    }
+
+    if (icon) {
+      updateData.iconUrl = `/uploads/products/${icon.filename}`;
     }
 
     try {
@@ -206,8 +239,13 @@ class ProductController {
         runValidators: true,
       });
 
-      if (req.file && existingProduct.previewUrl) {
+      // remove the old files only after the update succeeded
+      if (image && existingProduct.previewUrl) {
         await deleteUpload(existingProduct.previewUrl);
+      }
+
+      if (icon && existingProduct.iconUrl) {
+        await deleteUpload(existingProduct.iconUrl);
       }
 
       return res.status(200).json({
@@ -216,10 +254,7 @@ class ProductController {
         data: updatedProduct,
       });
     } catch (error) {
-      if (req.file) {
-        await deleteUpload(`/uploads/products/${req.file.filename}`);
-      }
-
+      await cleanup();
       throw error;
     }
   });
@@ -239,6 +274,10 @@ class ProductController {
 
     if (product.previewUrl) {
       await deleteUpload(product.previewUrl);
+    }
+
+    if (product.iconUrl) {
+      await deleteUpload(product.iconUrl);
     }
 
     await product.deleteOne();

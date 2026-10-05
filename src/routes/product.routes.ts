@@ -11,6 +11,12 @@ import { protect, authorizeRoles } from "../middleware/auth.middleware";
 
 const router = express.Router();
 
+// Two optional uploads per request: the large preview and the small icon
+const productUploads = uploadProductImage.fields([
+  { name: "image", maxCount: 1 },
+  { name: "icon", maxCount: 1 },
+]);
+
 /**
  * @openapi
  * components:
@@ -47,6 +53,9 @@ const router = express.Router();
  *           items:
  *             type: string
  *           minItems: 1
+ *         iconUrl:
+ *           type: string
+ *           description: Small square logo shown next to the product name
  *         previewUrl:
  *           type: string
  *         productUrl:
@@ -69,17 +78,41 @@ const router = express.Router();
 
 /**
  * @openapi
+ * /api/v1/products:
+ *   get:
+ *     summary: Get all active products (public)
+ *     description: Returns only products with status "active", featured first.
+ *     tags: [Products]
+ *     responses:
+ *       200:
+ *         description: List of active products
+ */
+router.get("/", ProductController.handleGetActiveProducts);
+
+/**
+ * @openapi
  * /api/v1/products/all:
  *   get:
- *     summary: Get all products (admin)
+ *     summary: Get all products including inactive (admin)
  *     tags: [Products - Admin]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of all products
+ *       401:
+ *         description: Access token missing/invalid
+ *       403:
+ *         description: Forbidden — admin role required
  *       404:
  *         description: No products found
  */
-router.get("/all", ProductController.handleGetProducts);
+router.get(
+  "/all",
+  protect,
+  authorizeRoles("ADMIN"),
+  ProductController.handleGetProducts,
+);
 
 /**
  * @openapi
@@ -87,6 +120,8 @@ router.get("/all", ProductController.handleGetProducts);
  *   get:
  *     summary: Get a single product by ID (admin)
  *     tags: [Products - Admin]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -98,11 +133,17 @@ router.get("/all", ProductController.handleGetProducts);
  *         description: Product found
  *       400:
  *         description: Invalid product ID
+ *       401:
+ *         description: Access token missing/invalid
+ *       403:
+ *         description: Forbidden — admin role required
  *       404:
  *         description: Product not found
  */
 router.get(
   "/:id",
+  protect,
+  authorizeRoles("ADMIN"),
   validate(productIdParamSchema),
   ProductController.handleGetProductById,
 );
@@ -113,6 +154,8 @@ router.get(
  *   post:
  *     summary: Create a product (admin)
  *     tags: [Products - Admin]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -156,6 +199,11 @@ router.get(
  *               image:
  *                 type: string
  *                 format: binary
+ *                 description: Large preview image (required)
+ *               icon:
+ *                 type: string
+ *                 format: binary
+ *                 description: Small square logo (optional)
  *     responses:
  *       201:
  *         description: Product created
@@ -168,7 +216,7 @@ router.post(
   "/",
   protect,
   authorizeRoles("ADMIN"),
-  uploadProductImage.single("image"),
+  productUploads,
   validate(createProductSchema),
   ProductController.handleCreateProduct,
 );
@@ -178,8 +226,10 @@ router.post(
  * /api/v1/products/{id}:
  *   put:
  *     summary: Update a product (admin)
- *     description: Partial update — only send the fields you want to change. Send `image` only if replacing the preview image.
+ *     description: Partial update — only send the fields you want to change. Send `image` or `icon` only if replacing that image.
  *     tags: [Products - Admin]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -226,6 +276,9 @@ router.post(
  *               image:
  *                 type: string
  *                 format: binary
+ *               icon:
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: Product updated
@@ -240,7 +293,7 @@ router.put(
   "/:id",
   protect,
   authorizeRoles("ADMIN"),
-  uploadProductImage.single("image"),
+  productUploads,
   validate(updateProductSchema),
   ProductController.handleUpdateProduct,
 );
@@ -251,6 +304,8 @@ router.put(
  *   delete:
  *     summary: Delete a product (admin)
  *     tags: [Products - Admin]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

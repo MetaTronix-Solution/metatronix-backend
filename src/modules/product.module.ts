@@ -8,6 +8,7 @@ export interface IProduct extends Document {
   problem: string;
   features: string[];
   technologies: string[];
+  iconUrl?: string;
   previewUrl: string;
   productUrl: string;
   featured: boolean;
@@ -82,6 +83,12 @@ const productSchema = new Schema<IProduct>(
         validator: (tech: string[]) => tech.length > 0,
         message: "At least one technology is required",
       },
+    },
+
+    iconUrl: {
+      type: String,
+      trim: true,
+      default: "",
     },
 
     previewUrl: {
