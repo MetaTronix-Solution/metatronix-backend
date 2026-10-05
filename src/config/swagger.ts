@@ -1,6 +1,10 @@
 import swaggerJsdoc from "swagger-jsdoc";
 import path from "path";
 
+// glob patterns need forward slashes, even on Windows
+const routesGlob = (ext: string) =>
+  path.join(__dirname, `../routes/**/*.${ext}`).replace(/\\/g, "/");
+
 const options: swaggerJsdoc.Options = {
   definition: {
     openapi: "3.0.0",
@@ -10,12 +14,9 @@ const options: swaggerJsdoc.Options = {
         bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
       },
     },
-    servers: [{ url: "http://localhost:5000/" }],
+    servers: [{ url: "http://localhost:5000" }],
   },
-  // path.join guarantees absolute resolution relative to this file
-  apis: [
-    path.join(__dirname, "../routes/**/*.ts"),
-    path.join(__dirname, "../routes/**/*.js"),
-  ],
+  apis: [routesGlob("ts"), routesGlob("js")],
 };
+
 export const swaggerSpec = swaggerJsdoc(options);

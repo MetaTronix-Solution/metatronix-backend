@@ -38,7 +38,7 @@ const router = express.Router();
  *           nullable: true
  *         path:
  *           type: string
- *           example: /api/v1/blogs
+ *           example: /blog
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -64,7 +64,45 @@ const router = express.Router();
  *           description: Hourly (day), daily (week/month), or monthly (year) bucket label depending on the selected period
  *         count:
  *           type: integer
+ *     DashboardOverview:
+ *       type: object
+ *       properties:
+ *         totalBlogs:
+ *           type: integer
+ *           example: 24
+ *         totalTeamMembers:
+ *           type: integer
+ *           example: 8
+ *         totalProducts:
+ *           type: integer
+ *           example: 15
+ *         totalCareers:
+ *           type: integer
+ *           example: 6
  */
+
+/**
+ * @openapi
+ * /api/v1/analytics/track:
+ *   post:
+ *     summary: Record a page view (public)
+ *     description: Called by the frontend on each route change. Only whitelisted public sections are stored.
+ *     tags: [Analytics]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               path:
+ *                 type: string
+ *                 example: /blog/my-post
+ *     responses:
+ *       204:
+ *         description: Accepted (always returned, even if the path is ignored)
+ */
+router.post("/track", AnalyticsController.handleTrackVisit);
 
 /**
  * @openapi
@@ -133,31 +171,6 @@ router.get(
   validate(getSummarySchema),
   AnalyticsController.handleGetSummary,
 );
-
-/**
- * @openapi
- * components:
- *   schemas:
- *     Visit:
- *       ...
- *     DashboardOverview:
- *       type: object
- *       properties:
- *         totalBlogs:
- *           type: integer
- *           example: 24
- *         totalTeamMembers:
- *           type: integer
- *           example: 8
- *         totalProducts:
- *           type: integer
- *           example: 15
- *         totalCareers:
- *           type: integer
- *           example: 6
- */
-
-// ... existing /admin/visits and /admin/summary blocks stay as-is
 
 /**
  * @openapi
