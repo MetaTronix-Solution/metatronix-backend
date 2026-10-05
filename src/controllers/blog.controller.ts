@@ -68,6 +68,7 @@ class BlogController {
         author,
         category,
         published,
+        publishedAt: String(published) === "true" ? new Date() : undefined,
       });
 
       return res.status(201).json({
@@ -147,6 +148,9 @@ class BlogController {
 
     if (published !== undefined) {
       updateData.published = published;
+      if (String(published) === "true" && !existingBlog.publishedAt) {
+        updateData.publishedAt = new Date();
+      }
     }
 
     if (req.file) {
@@ -215,7 +219,7 @@ class BlogController {
 
       const [blogs, total] = await Promise.all([
         Blog.find(filter)
-          .sort({ publishedAt: -1 })
+          .sort({ publishedAt: -1, createdAt: -1 })
           .skip(skip)
           .limit(limit)
           .select("-__v"),
