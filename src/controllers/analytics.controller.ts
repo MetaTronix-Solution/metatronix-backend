@@ -1,3 +1,4 @@
+import geoip from "geoip-lite";
 import Visit from "../modules/visit.module";
 import asyncHandler from "../util/asyncHandler";
 import AppError from "../util/AppError";
@@ -27,6 +28,27 @@ const PERIOD_DATE_FORMAT: Record<Period, string> = {
   year: "%Y-%m", // monthly buckets
 };
 
+// Only these public sections are recorded. Detail pages are folded into
+// their section (e.g. /blog/my-post -> /blog).
+const TRACKED_PAGES = new Set([
+  "/",
+  "/about",
+  "/services",
+  "/products",
+  "/team",
+  "/blog",
+  "/careers",
+  "/contact",
+]);
+
+const normalizePath = (raw: unknown): string | null => {
+  if (typeof raw !== "string") return null;
+  const clean = raw.split(/[?#]/)[0];
+  const first = clean.split("/").filter(Boolean)[0];
+  const section = first ? `/${first.toLowerCase()}` : "/";
+  return TRACKED_PAGES.has(section) ? section : null;
+};
+
 const getSince = (period: Period): Date => {
   const since = new Date();
   since.setDate(since.getDate() - PERIOD_DAYS[period]);
@@ -41,6 +63,31 @@ const getPeriod = (req: Request): Period => {
 };
 
 class AnalyticsController {
+  // Public: called by the frontend PageTracker on each route change.
+  // Always answers 204 so tracking can never break the site.
+  handleTrackVisit = asyncHandler(async (req: Request, res: Response) => {
+    const path = normalizePath(req.body?.path);
+    if (!path) return res.status(204).end();
+
+    try {
+      const ip = req.ip ?? "unknown";
+      const geo = req.ip ? geoip.lookup(req.ip) : null;
+
+      await Visit.create({
+        ip,
+        path,
+        country: geo?.country,
+        city: geo?.city || undefined,
+        latitude: geo?.ll?.[0],
+        longitude: geo?.ll?.[1],
+      });
+    } catch (error) {
+      console.error("Failed to record visit:", error);
+    }
+
+    return res.status(204).end();
+  });
+
   // Raw visits for the selected period — e.g. to plot pins on a map.
   // No pagination: the dashboard needs the full set for the period.
   handleGetVisits = asyncHandler(async (req: Request, res: Response) => {
@@ -130,30 +177,30 @@ class AnalyticsController {
   // Aggregate counts across all content types — used for the top-level
   // dashboard overview cards (total blogs, team members, products, etc.)
   handleGetOverview = asyncHandler(async (req: Request, res: Response) => {
-  let totalBlogs, totalTeamMembers, totalProducts, totalCareers;
+    let totalBlogs, totalTeamMembers, totalProducts, totalCareers;
 
-  try {
-    [totalBlogs, totalTeamMembers, totalProducts, totalCareers] =
-      await Promise.all([
-        Blog.countDocuments(),
-        Team.countDocuments(),
-        Product.countDocuments(),
-        Career.countDocuments(),
-      ]);
-  } catch (error) {
-    throw new AppError("Failed to fetch dashboard overview.", 500);
-  }
+    try {
+      [totalBlogs, totalTeamMembers, totalProducts, totalCareers] =
+        await Promise.all([
+          Blog.countDocuments(),
+          Team.countDocuments(),
+          Product.countDocuments(),
+          Career.countDocuments(),
+        ]);
+    } catch (error) {
+      throw new AppError("Failed to fetch dashboard overview.", 500);
+    }
 
-  return res.status(200).json({
-    success: true,
-    data: {
-      totalBlogs,
-      totalTeamMembers,
-      totalProducts,
-      totalCareers,
-    },
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalBlogs,
+        totalTeamMembers,
+        totalProducts,
+        totalCareers,
+      },
+    });
   });
-});
 }
 
 export default new AnalyticsController();
